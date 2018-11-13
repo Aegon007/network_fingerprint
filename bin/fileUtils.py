@@ -4,10 +4,24 @@ import os
 import sys
 
 
-def readTxtFile(fpath):
+def str2int(str_input):
+    if str_input.find('.'):
+        return int(float(str_input))
+    else:
+        return int(str_input)
+
+
+def str2float(str_input):
+    return float(str_input)
+
+
+def readTxtFile(fpath, ignore):
     with open(fpath, 'r') as f:
-        content = f.read()
-    return content
+        for line in f:
+            line = line.strip()
+            if line.startswith(ignore):
+                continue
+            yield line
 
 
 def writeTxtFile(fpath, content):
