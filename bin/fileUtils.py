@@ -35,3 +35,8 @@ def readBinFile():
 
 def writeBinFile():
     pass
+
+
+def genfilelist(pathDir):
+    fnameList = os.listdir(pathDir)
+    return list(map(lambda x: os.path.join(pathDir, x), fnameList))
