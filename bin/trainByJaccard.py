@@ -34,12 +34,16 @@ def readfile(fpath):
     #print('start to load file {}'.format(fpath))
     tmpSet = set()
     fpath = os.path.abspath(fpath)
-    for line in fileUtils.readTxtFile(fpath, ',time'):
+    for line in fileUtils.readTxtFile(fpath, ','):
         tmp = line.split(',')
-        if 1 < len(tmp):
+        if len(tmp) == 4 :
             elem = fileUtils.str2int(tmp[-1]) * fileUtils.str2int(tmp[-2])
-        else:
+        elif len(tmp) == 1:
             elem = tmp[0]
+        else:
+            #import pdb
+            #pdb.set_trace()
+            elem = fileUtils.str2int(tmp[4]) * fileUtils.str2int(tmp[3])
         tmpSet.add(elem)
 
     #print('finish load file {}'.format(fpath))

@@ -35,9 +35,11 @@ def getFeature(fpath):
     if opts.model == 'Jaccard':
         return fpath
     elif opts.model == 'Bayes':
-        return trainByBayes.computeFeature()
+        rangeList = [-1500, 1501, 50]
+        return trainByBayes.computeFeature(fpath, rangeList)
     elif opts.model == 'VNGpp':
-        return trainByVNGpp.computeFeature()
+        rangeList = [-50000, 50001, 5000]
+        return trainByVNGpp.computeFeature(fpath, rangeList)
     else:
         raise ValueError('input is should among Jaccard/Bayes/VNGpp')
 
@@ -116,14 +118,14 @@ def main(opts):
 
         accuracy = computeACC(predictions, Y_test)
         acc_list.append(accuracy)
-
+    print(acc_list)
     avg_accuracy = sum(acc_list)/len(acc_list)
     print('prediction with method {}, has a accuracy is: {}'.format(opts.model, avg_accuracy))
 
 
 def parseOpts(argv):
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', help='choose which model you want to use')
+    parser.add_argument('-m', '--model', help='choose which model Jaccard/Bayes/VNGpp you want to use')
     parser.add_argument('-d', '--dataDir', help='data dir where store all data')
     parser.add_argument('-n', '--nFold', help='indicate how many fold')
     opts = parser.parse_args()

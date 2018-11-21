@@ -9,41 +9,31 @@ import argparse
 import numpy as np
 
 import fileUtils
+import tools
 
 
 def saveModel(modelData, fpath):
     joblib.dump(modelData, fpath)
 
 
-def getSectionList(start, end, interval):
-    rangeList = [start]
-    while 1:
-        tmpPoint = start + interval
-        if tmpPoint >= end:
-            break
-        rangeList.append(tmpPoint)
-        start = tmpPoint
-    rangeList.append(end)
-    secList = len(range(len(rangeList)-1))
-    return rangeList, secList
+def readfile(fpath):
+    tmpList = []
+    for line in fileUtils.readTxtFile(fpath, ','):
+        tmp = line.split(',')
+        if len(tmp) > 4:
+            tmp_multi = fileUtils.str2int(tmp[3]) * fileUtils.str2int(tmp[4])
+        else:
+            tmp_multi = fileUtils.str2int(tmp[-1]) * fileUtils.str2int(tmp[-2])
+        tmpList.append(tmp_multi)
+    return tmpList
 
 
-def computeRange(rangeList, feature):
-    l = len(rangeList) - 1
-    for i in range(l):
-        x1 = rangeList[i]
-        x2 = rangeList[i+1]
-        if x1 <= feature < x2:
-            return i
-
-    raise ValueError('the value of feature exceed the rangeList')
-
-
-def computeFeature(fpath):
-    rangeList, sectionList = getSectionList(-1500, 1500, 100)
+def computeFeature(fpath, rangeList):
+    start, end, interval = rangeList[0], rangeList[1], rangeList[2]
+    rangeList, sectionList = tools.getSectionList(start, end, interval)
     features = readfile(fpath)
     for feat in features:
-        index = computeRange(rangeList, feat)
+        index = tools.computeRange(rangeList, feat)
         sectionList[index] += 1
 
     return sectionList
@@ -53,7 +43,7 @@ def computeAllFeature(dpath):
     fileList = fileUtils.genfilelist(dpath)
     allFeatures = []
     for fpath in fileList:
-        tmpFeat = computeOneSampleFeature(fpath)
+        tmpFeat = computeFeature(fpath)
         allFeatures.append(tmpFeat)
 
     return np.array(allFeatures)
@@ -65,20 +55,18 @@ def train(trainData, trainLabel):
     return y_pred
 
 
-def loadTrainData(dataDir):
-    fList = fileUtils.genfilelist(dataDir)
-
-
 def main(opts):
     trainDataDir = opts.trainDataDir
     data, label = loadTrainData(trainDataDir)
     mymodel = train(data, label)
-    saveModel(mymodel, fpath)
+    saveModel(mymodel, opts.modelSaveDir)
+    print('model saved at {}'.format(opts.modelSaveDir))
 
 
 def parseOpts(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-t', '--trainDataDir', help='path to training data dir')
+    parser.add_argument('-m', '--modelSaveDir', help='path to model save dir')
     opts = parser.parse_args()
     return opts
 

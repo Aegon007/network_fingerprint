@@ -9,40 +9,87 @@ import argparse
 import numpy as np
 
 import fileUtils
+import tools
 
 
 def saveModel(modelData, fpath):
     joblib.dump(modelData, fpath)
 
 
-def calculateBursts():
-    pass
+def calculateBursts(tupleList):
+    tuple_length = len(tupleList)
+    for i in range(tuple_length):
+        item = tupleList[i]
+        if 0 == i:
+            direction = item[-1]
+            burstList = []
+            tmp_burst = item[0] * item[1]
+            continue
+
+        tmp_direc = item[-1]
+        if direction != tmp_direc:
+            burstList.append(tmp_burst)
+            direction = tmp_direc
+            tmp_burst = (item[0] * item[1])
+        else:
+            tmp_burst += (item[0] * item[1])
+
+    burstList.append(tmp_burst)
+
+    return burstList
 
 
-def computeFeature(fpath):
+def readfile(fpath):
     UpStreamTotal = 0
     DownStreamTotal = 0
-    UpStreamPackageNum = 0
-    DownStreamPackageNum = 0
     traceTimeList = []
-    for line in fileUtils.readTxtFile(fpath, ',time'):
+    tupleList = []
+    for line in fileUtils.readTxtFile(fpath, ','):
         tmp = line.split(',')
-        flag = fileUtils.str2int(tmp[-1])
-        traceTimeList.append(tmp[1])
+        if len(tmp) > 4:
+            flag = fileUtils.str2int(tmp[4])
+            traceTimeList.append(fileUtils.str2float(tmp[2]))
+            tmpTuple = (fileUtils.str2int(tmp[3]), fileUtils.str2int(tmp[4]))
+        else:
+            flag = fileUtils.str2int(tmp[-1])
+            traceTimeList.append(fileUtils.str2float(tmp[1]))
+            tmpTuple = (fileUtils.str2int(tmp[-2]), fileUtils.str2int(tmp[-1]))
+
+        tupleList.append(tmpTuple)
+
         if 1 == flag:
-            UpStreamPackageNum += 1
+            #UpStreamPackageNum += 1
             UpStreamTotal += fileUtils.str2int(tmp[-2])
         elif -1 == flag:
-            DownStreamPackageNum += 1
+            #DownStreamPackageNum += 1
             DownStreamTotal += fileUtils.str2int(tmp[-2])
         else:
             raise ValueError('unexpected flag value: {}'.format(flag))
 
-    traceTimeList.sort()
-    TotalTraceTime = traceTimeList[-1] - traceTimeList[0]
-    TotalBurstByte = DownStreamTotal + UpStreamTotal
+    return UpStreamTotal, DownStreamTotal, traceTimeList, tupleList
 
-    return [TotalTraceTime, TotalBurstByte, UpStreamPackageNum, UpStreamTotal, DownStreamPackageNum, DownStreamTotal]
+
+def computeFeature(fpath, rangeList):
+    UpStreamTotal, DownStreamTotal, traceTimeList, tupleList = readfile(fpath)
+
+    burstList = calculateBursts(tupleList)
+    start, end, interval = rangeList[0], rangeList[1], rangeList[2]
+    rangeList, sectionList = tools.getSectionList(start, end, interval)
+    for feat in burstList:
+        index = tools.computeRange(rangeList, feat)
+        sectionList[index] += 1
+    TotalBurstByte = sectionList
+
+    traceTimeList.sort()
+    #import pdb
+    #pdb.set_trace()
+    TotalTraceTime = traceTimeList[-1] - traceTimeList[0]
+
+    #import pdb
+    #pdb.set_trace()
+    tmp_rtn = [TotalTraceTime, UpStreamTotal, DownStreamTotal]
+    tmp_rtn.extend(TotalBurstByte)
+    return tmp_rtn
 
 
 def train(trainData, trainLabel):

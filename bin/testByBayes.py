@@ -9,7 +9,7 @@ from sklearn.metrics import classification_report
 import numpy as np
 
 
-def test(model, testData):
+def test(mymodel, testData):
     label = mymodel.predict(testData)
     return label
 

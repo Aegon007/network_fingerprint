@@ -3,6 +3,7 @@
 import os
 import sys
 import unittest
+import unittest.mock
 
 sys.path.append('bin')
 import trainByBayes
@@ -15,30 +16,16 @@ class Test_nFoldCrossValidatdation(unittest.TestCase):
     def tearDown(self):
         pass
 
-    def test_getSectionList(self):
-        #import pdb
-        #pdb.set_trace()
-        result1, result2 = trainByBayes.getSectionList(-100, 100, 50)
-        expect1 = [-100, -50, 0, 50, 100]
-        expect2 = 4
-        self.assertEqual(result1, expect1)
-        self.assertEqual(result2, expect2)
 
-    def test_computeRange(self):
-        rangeList = [-100, -50, 0, 50, 100]
-        feature = -55
-        result = trainByBayes.computeRange(rangeList, feature)
-        expect = 0
-        self.assertEqual(result, expect)
+    @unittest.mock.patch('trainByBayes.readfile')
+    def test_computeFeature(self, mock_readfile):
+        mock_readfile.return_value = [50, 99, 98, 66, 5, -90, -80, -77, 44, -44]
+        rangeList = [-100, 100, 50]
+        result = trainByBayes.computeFeature('test_file', rangeList)
+        expect = [3, 1, 2, 4]
+        self.assertTrue(4==len(result))
+        self.assertEquals(result, expect)
 
-        rangeList = [-100, -50, 0, 50, 100]
-        feature = 55
-        result = trainByBayes.computeRange(rangeList, feature)
-        expect = 3
-        self.assertEqual(result, expect)
-
-    def test_computeFeature(self):
-        pass
 
     def test_loadTrainData(self):
         pass
