@@ -18,6 +18,7 @@ import testByVNGpp
 
 import utils
 import fileUtils
+import parseWord2VecFile
 
 
 def computeACC(predictions, labels):
@@ -38,7 +39,7 @@ def getFeature(fpath):
         rangeList = [-1500, 1501, 50]
         return trainByBayes.computeFeature(fpath, rangeList)
     elif opts.model == 'VNGpp':
-        rangeList = [-50000, 50001, 5000]
+        rangeList = [-200000, 200001, 5000]
         return trainByVNGpp.computeFeature(fpath, rangeList)
     else:
         raise ValueError('input is should among Jaccard/Bayes/VNGpp')
@@ -65,8 +66,6 @@ def mapLabel(fpath, labelMap):
 
 
 def loadData(dataDir):
-    #tmpList = os.listdir(dataDir)
-    #fList = list(map(lambda x: os.path.join(dataDir, x), tmpList))
     fList = fileUtils.genfilelist(dataDir)
     labelMap = getLabelMap(fList)
     tmpDataList = []
@@ -92,6 +91,87 @@ def convert2Nums(predictions, labelMap):
     return num_predicts
 
 
+def convert2Str(numLabels, labelMap):
+    tmpList = []
+    for num in numLabels:
+        for key in labelMap.keys():
+            if num == labelMap[key]:
+                tmpList.append(key)
+                break
+    return tmpList
+
+
+def computeDistance(vecA, vecB, method):
+    npVecA = np.array(vecA)
+    npVecB = np.array(vecB)
+    if 'cosin' == method:
+        return np.dot(npVecA, npVecB)/(np.linalg.norm(npVecA)*np.linalg.norm(npVecB))
+    elif 'euclidean' == method:
+        return np.linalg.norm(npVecA - npVecB)
+    else:
+        raise ValueError('method {} not supported yet'.format(method))
+
+def sortTupleList(tupleList):
+    return sorted(tupleList, key=lambda x: x[1])
+
+def computeRankScore(word2vecDict, prediction, label):
+    vec_pred = word2vecDict[prediction]
+    scoreList = []
+    for key in word2vecDict.keys():
+        if key == prediction:
+            continue
+        vec_i = word2vecDict[key]
+        score = computeDistance(vec_i, vec_pred, 'cosin')
+        tmpTuple = (key, score)
+        scoreList.append(tmpTuple)
+
+    sortedList = sortTupleList(scoreList)
+    for i in range(len(sortedList)):
+        if label == sortedList[i][0]:
+            return i
+    return -1
+
+def writeTestResults(str_Y_test, str_predictions, word2vecfile, file2store):
+    word2vecDict = parseWord2VecFile.loadData(word2vecfile)
+    assert(len(str_Y_test) == len(str_predictions))
+    tmpList = ['label\tprediction\tdistance\trank score']
+
+    checkList = []
+    for item in str_Y_test:
+        if item in word2vecDict.keys():
+            continue
+        checkList.append(item)
+
+    for item in word2vecDict.keys():
+        if item in str_Y_test:
+            continue
+        checkList.append(item)
+
+    if len(checkList) > 0:
+        raise ValueError('checkList is not empty, {}'.format(' '.join(checkList)))
+
+    scoreList = []
+    for i in range(len(str_Y_test)):
+        item_Y = str_Y_test[i]
+        item_pred = str_predictions[i]
+        vec_Y = word2vecDict[item_Y]
+        vec_pred = word2vecDict[item_pred]
+        score = computeDistance(vec_Y, vec_pred, 'cosin')
+        scoreList.append(score)
+        rankscore = computeRankScore(word2vecDict, item_pred, item_Y)
+        tmpLine = '{}\t{}\t{}\t{}'.format(item_Y, item_pred, score, rankscore)
+        tmpList.append(tmpLine)
+
+    sumUp = sum(scoreList)
+    average = sumUp/len(scoreList)
+    tmpLine = 'total = {};\taverage = {}'.format(sumUp, average)
+    tmpList.append(tmpLine)
+    content = '\n'.join(tmpList)
+    print(content)
+    with open(file2store, 'w') as f:
+        f.write(content)
+
+
 def main(opts):
     allData, allLabel, labelMap = loadData(opts.dataDir)
     skf = StratifiedKFold(n_splits=int(opts.nFold))
@@ -103,16 +183,16 @@ def main(opts):
         if opts.model == 'Jaccard':
             modelFileDir = utils.makeTempDir()
             trainByJaccard.train(X_train, modelFileDir)
-            #import pdb
-            #pdb.set_trace()
-            predictions = testByJaccard.test(X_test, modelFileDir)
-            predictions = convert2Nums(predictions, labelMap)
+            str_predictions = testByJaccard.test(X_test, modelFileDir)
+            predictions = convert2Nums(str_predictions, labelMap)
         elif opts.model == 'Bayes':
             model = trainByBayes.train(X_train, Y_train)
             predictions = testByBayes.test(model, X_test)
+            str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'VNGpp':
             model = trainByVNGpp.train(X_train, Y_train)
             predictions = testByVNGpp.test(model, X_test)
+            str_predictions = convert2Str(predictions, labelMap)
         else:
             raise ValueError('input is should among Jaccard/Bayes/VNGpp')
 
@@ -122,12 +202,18 @@ def main(opts):
     avg_accuracy = sum(acc_list)/len(acc_list)
     print('prediction with method {}, has a accuracy is: {}'.format(opts.model, avg_accuracy))
 
+    if opts.word2vec:
+        str_Y_test = convert2Str(Y_test, labelMap)
+        writeTestResults(str_Y_test, str_predictions, opts.word2vec, opts.file2store)
+
 
 def parseOpts(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-m', '--model', help='choose which model Jaccard/Bayes/VNGpp you want to use')
     parser.add_argument('-d', '--dataDir', help='data dir where store all data')
     parser.add_argument('-n', '--nFold', help='indicate how many fold')
+    parser.add_argument('-w', '--word2vec', help='file store word2vec data')
+    parser.add_argument('-f', '--file2store', help='file store result data')
     opts = parser.parse_args()
     return opts
 
