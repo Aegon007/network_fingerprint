@@ -42,9 +42,11 @@ def calculateBursts(tupleList):
 def readfile(fpath):
     UpStreamTotal = 0
     DownStreamTotal = 0
+    UpPackNum = 0
+    DownPackNum = 0
     traceTimeList = []
     tupleList = []
-    for line in fileUtils.readTxtFile(fpath, ','):
+    for line in fileUtils.readTxtFile(fpath, 'time'):
         tmp = line.split(',')
         if len(tmp) > 4:
             flag = fileUtils.str2int(tmp[4])
@@ -58,19 +60,19 @@ def readfile(fpath):
         tupleList.append(tmpTuple)
 
         if 1 == flag:
-            #UpStreamPackageNum += 1
             UpStreamTotal += fileUtils.str2int(tmp[-2])
+            UpPackNum += 1
         elif -1 == flag:
-            #DownStreamPackageNum += 1
             DownStreamTotal += fileUtils.str2int(tmp[-2])
+            DownPackNum += 1
         else:
             raise ValueError('unexpected flag value: {}'.format(flag))
 
-    return UpStreamTotal, DownStreamTotal, traceTimeList, tupleList
+    return UpPackNum, DownPackNum, UpStreamTotal, DownStreamTotal, traceTimeList, tupleList
 
 
 def computeFeature(fpath, rangeList):
-    UpStreamTotal, DownStreamTotal, traceTimeList, tupleList = readfile(fpath)
+    _, _, UpStreamTotal, DownStreamTotal, traceTimeList, tupleList = readfile(fpath)
 
     burstList = calculateBursts(tupleList)
     start, end, interval = rangeList[0], rangeList[1], rangeList[2]
@@ -81,8 +83,6 @@ def computeFeature(fpath, rangeList):
     TotalBurstByte = sectionList
 
     traceTimeList.sort()
-    #import pdb
-    #pdb.set_trace()
     TotalTraceTime = traceTimeList[-1] - traceTimeList[0]
 
     #import pdb

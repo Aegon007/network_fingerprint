@@ -18,7 +18,7 @@ def saveModel(modelData, fpath):
 
 def readfile(fpath):
     tmpList = []
-    for line in fileUtils.readTxtFile(fpath, ','):
+    for line in fileUtils.readTxtFile(fpath, 'time'):
         tmp = line.split(',')
         if len(tmp) > 4:
             tmp_multi = fileUtils.str2int(tmp[3]) * fileUtils.str2int(tmp[4])

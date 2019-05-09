@@ -6,18 +6,26 @@ import argparse
 
 import fileUtils
 import testByJaccard
+from collections import defaultdict
 
 
 def main(opts):
     fileList = fileUtils.genfilelist(opts.dirpath)
     count = 0
+    tmpSet = set()
+    for fpath in fileList:
+        fname = os.path.basename(fpath)
+        fname = testByJaccard.getLabel(fname)
+        tmpSet.add(fname)
+        count = count + 1
+
+    tmpList = list(tmpSet)
+    tmpList.sort()
+
     with open(opts.respath, 'w') as f:
-        for fpath in fileList:
-            fname = os.path.basename(fpath)
-            #fname = testByJaccard.getLabel(fname)
-            tmpLine = '{}\n'.format(fname)
-            f.write(tmpLine)
-            count = count + 1
+        content = '\n'.join(tmpSet)
+        f.write(content)
+
     print('write {} file names'.format(count))
 
 def parseOpts(argv):

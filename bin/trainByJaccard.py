@@ -24,9 +24,10 @@ def generateDictOfClass(fileNameList):
         for key in keySet:
             fileName = os.path.basename(fpath)
             if fileName.startswith(key):
-                tmp = os.path.join(fpath)
-                fListDict[key].append(tmp)
+                fListDict[key].append(fpath)
 
+    #import pdb
+    #pdb.set_trace()
     return fListDict
 
 
@@ -34,7 +35,7 @@ def readfile(fpath):
     #print('start to load file {}'.format(fpath))
     tmpSet = set()
     fpath = os.path.abspath(fpath)
-    for line in fileUtils.readTxtFile(fpath, ','):
+    for line in fileUtils.readTxtFile(fpath, 'time'):
         tmp = line.split(',')
         if len(tmp) == 4 :
             elem = fileUtils.str2int(tmp[-1]) * fileUtils.str2int(tmp[-2])
@@ -43,7 +44,7 @@ def readfile(fpath):
         else:
             #import pdb
             #pdb.set_trace()
-            elem = fileUtils.str2int(tmp[4]) * fileUtils.str2int(tmp[3])
+            elem = fileUtils.str2int(tmp[-1]) * fileUtils.str2int(tmp[-2])
         tmpSet.add(elem)
 
     #print('finish load file {}'.format(fpath))
@@ -99,8 +100,6 @@ def train(filepathList, classDictFileDir):
     it will write a file named class file which list
     all class file and its corresponding file path
     '''
-    #import pdb
-    #pdb.set_trace()
     fListDict = generateDictOfClass(filepathList)
 
     classDict = defaultdict(list)
@@ -111,6 +110,8 @@ def train(filepathList, classDictFileDir):
             tmp = trainFromList(fListDict[key])
         classDict[key] = tmp
 
+    #import pdb
+    #pdb.set_trace()
     writeDict2File(classDictFileDir, classDict)
 
 

@@ -17,7 +17,15 @@ def computeJaccardDist(setA, setB):
 
 
 def getLabel(fpath):
-    '''need to negotiate the file name pattern first'''
+    #tmp function
+    fname = os.path.basename(fpath)
+    tmpList = fname.split('_??_')
+    tmpName = tmpList[0]
+    return tmpName[0:-1]
+
+'''
+def getLabel(fpath):
+    #need to negotiate the file name pattern first
     pattern = '([a-zA-Z\']*[a-zA-Z_]+)_[0-9].*'
     fname = os.path.basename(fpath)
     m = re.match(pattern, fname)
@@ -25,6 +33,7 @@ def getLabel(fpath):
         return m.group(1)
     else:
         return os.path.basename(fpath)
+'''
 
 
 def str2int(tmpSet):
