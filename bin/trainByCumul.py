@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+## Copyright@Chenggang Wang
+## Email: 1277223029@qq.com
+## May 9th, 2019
+
 import os
 import sys
 import argparse
@@ -12,6 +16,19 @@ import fileUtils
 import tools
 import trainByJaccard
 from trainByBayes import saveModel
+import trainByVNGpp
+
+
+def padZero(theList, featLength):
+    count = featLength - len(theList)
+    while count > 0:
+        theList.append(0)
+        count = count - 1
+
+    #import pdb
+    #pdb.set_trace()
+    assert(len(theList)==featLength)
+    return theList
 
 
 def samplingList(cumulList, featLength):
@@ -24,27 +41,30 @@ def samplingList(cumulList, featLength):
         newList = [cumulList[0]]
         while 1:
             i = i + interVal
-            print(i)
+            #print(i)
             if i > cLen:
                 break
             newList.append(cumulList[i])
 
+    assert(len(newList)==featLength)
     return newList
 
 
 def computeFeature(fpath, featLength):
     upPackNum, downPackNum, upStreamTotal, downStreamTotal, traceTimeList, tupleList = trainByVNGpp.readfile(fpath)
 
+    def readfile(line):
+        tmp = line.strip().split(',')
+        return tmp[-2], tmp[-1]
     cumulList = []
-    with open(fpath, 'r') as f:
-        for line in f:
-            pSize, pDirec = readfile(line)
-            tmp = int(pSize) * int(pDirec)
-            if cumulList == []:
-                cumulList.append[tmp]
-            else:
-                lastOne = cumulList[-1] + tmp
-                cumulList.append(lastOne)
+    for line in fileUtils.readTxtFile(fpath, 'time'):
+        pSize, pDirec = readfile(line)
+        tmp = fileUtils.str2int(pSize) * fileUtils.str2int(pDirec)
+        if cumulList == []:
+            cumulList.append(tmp)
+        else:
+            lastOne = cumulList[-1] + tmp
+            cumulList.append(lastOne)
 
     finalFeature = samplingList(cumulList, featLength)
     finalFeature = finalFeature.extend([upPackNum, downPackNum, upStreamTotal, downStreamTotal])
@@ -53,20 +73,26 @@ def computeFeature(fpath, featLength):
 
 
 def train(trainData, trainLabel, context):
-    clf = SVC(c=context.cVal, kernel=context.kernel, degree=context.degreeVal, verbose=context.verbose, decision_function_shape='ovo', random_state=7)
+    print('start training...')
+    clf = SVC(C=context['cVal'], kernel=context['kernel'], degree=context['degree'], verbose=context['verbose'], decision_function_shape='ovo', random_state=7)
     tModel = clf.fit(trainData, trainLabel)
+    print('finish training...')
     return tModel
 
 
-def generateContext(opts):
-    cDict = opts.contextDict
-    return cDict
+def generateContext():
+    return {'cVal':0.1, 'kernel':'rbf', 'degree':3, 'verbose':False}
 
 
 def main(opts):
     trainDataDir = opts.inputDir
     data, label = loadTrainData(trainDataDir)
-    context = generateContext(opts)
+    import pdb
+    pdb.set_trace()
+    if opts.contextDict:
+        context = opts.contextDict
+    else:
+        context = generateContext()
     mymodel = train(data, label, context)
     saveModel(mymodel, opts.modelSaveDir)
     print("model saved at {}".format(opts.modelSaveDir))

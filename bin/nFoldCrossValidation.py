@@ -58,8 +58,7 @@ def getFeature(fpath, opts):
         return trainByAdaboost.computeFeature(fpath, rangeList)
     elif opts.model == 'Cumul':
         #rangeList = [-200000, 200001, int(opts.interval)]
-        rangeList = [-1400000, 1400001, int(opts.interval)]
-        return trainByCumul.computeFeature(fpath, rangeList)
+        return trainByCumul.computeFeature(fpath, 10)
     else:
         raise ValueError('input is should among Jaccard/Bayes/VNGpp/Svm/Adaboost')
 
@@ -257,7 +256,8 @@ def main(opts):
             predictions = testByAdaboost.test(model, X_test)
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'Cumul':
-            model = trainByCumul.train(X_train, Y_train)
+            context = trainByCumul.generateContext()
+            model = trainByCumul.train(X_train, Y_train, context)
             predictions = testByCumul.test(model, X_test)
             str_predictions = convert2Str(predictions, labelMap)
         else:
