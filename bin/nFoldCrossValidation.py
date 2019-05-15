@@ -5,6 +5,7 @@ import sys
 import argparse
 from sklearn.model_selection import KFold
 from sklearn.model_selection import StratifiedKFold
+from sklearn import preprocessing
 import numpy as np
 from collections import defaultdict
 
@@ -57,8 +58,7 @@ def getFeature(fpath, opts):
         rangeList = [-1400000, 1400001, int(opts.interval)]
         return trainByAdaboost.computeFeature(fpath, rangeList)
     elif opts.model == 'Cumul':
-        #rangeList = [-200000, 200001, int(opts.interval)]
-        return trainByCumul.computeFeature(fpath, 10)
+        return trainByCumul.computeFeature(fpath, trainByCumul.Length)
     else:
         raise ValueError('input is should among Jaccard/Bayes/VNGpp/Svm/Adaboost')
 
@@ -150,8 +150,6 @@ def computeRankScore(word2vecDict, prediction, label):
     return 0
 
 def writeTestResults(str_Y_test, str_predictions, opts, acc_list, avg_accuracy):
-    #import pdb
-    #pdb.set_trace()
     word2vecfile = opts.word2vec
     file2store = opts.file2store
     word2vecDict = parseWord2VecFile.loadData(word2vecfile)
@@ -225,19 +223,21 @@ def writeTestResults(str_Y_test, str_predictions, opts, acc_list, avg_accuracy):
 
 
 def main(opts):
+    print("start extracting feature...")
     allData, allLabel, labelMap = loadData(opts)
+    newData = preprocessing.scale(allData)
     skf = StratifiedKFold(n_splits=int(opts.nFold))
     acc_list = []
-    for train_index, test_index in skf.split(allData, allLabel):
-        X_train, X_test = allData[train_index], allData[test_index]
+    print("selecting model {}".format(opts.model))
+    for train_index, test_index in skf.split(newData, allLabel):
+        print("start a round of testing...")
+        X_train, X_test = newData[train_index], newData[test_index]
         Y_train, Y_test = allLabel[train_index], allLabel[test_index]
 
         if opts.model == 'Jaccard':
             modelFileDir = utils.makeTempDir()
             trainByJaccard.train(X_train, modelFileDir)
             str_predictions = testByJaccard.test(X_test, modelFileDir)
-            import pdb
-            pdb.set_trace()
             predictions = convert2Nums(str_predictions, labelMap)
         elif opts.model == 'Bayes':
             model = trainByBayes.train(X_train, Y_train)

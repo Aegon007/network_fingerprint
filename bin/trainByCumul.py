@@ -10,14 +10,24 @@ import argparse
 import math
 from collections import defaultdict
 from sklearn.svm import SVC
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import GridSearchCV
+from sklearn import preprocessing
 import numpy as np
+
 
 import fileUtils
 import tools
 import trainByJaccard
 from trainByBayes import saveModel
 import trainByVNGpp
+import nFoldCrossValidation
+import testByCumul
 
+
+Length = 10
 
 def padZero(theList, featLength):
     count = featLength - len(theList)
@@ -25,8 +35,6 @@ def padZero(theList, featLength):
         theList.append(0)
         count = count - 1
 
-    #import pdb
-    #pdb.set_trace()
     assert(len(theList)==featLength)
     return theList
 
@@ -37,15 +45,15 @@ def samplingList(cumulList, featLength):
         newList = padZero(cumulList, featLength)
     else:
         i = 0
-        interVal = int(cLen / featLength) + 1
-        newList = [cumulList[0]]
-        while 1:
-            i = i + interVal
-            #print(i)
-            if i > cLen:
-                break
+        interVal = int(cLen / featLength)
+        newList = []
+        for k in range(featLength):
             newList.append(cumulList[i])
+            i = i + interVal
 
+    #print(len(newList))
+    #print(newList)
+    #print(featLength)
     assert(len(newList)==featLength)
     return newList
 
@@ -59,7 +67,7 @@ def computeFeature(fpath, featLength):
     cumulList = []
     for line in fileUtils.readTxtFile(fpath, 'time'):
         pSize, pDirec = readfile(line)
-        tmp = fileUtils.str2int(pSize) * fileUtils.str2int(pDirec)
+        tmp = fileUtils.str2float(pSize) * fileUtils.str2float(pDirec)
         if cumulList == []:
             cumulList.append(tmp)
         else:
@@ -67,43 +75,67 @@ def computeFeature(fpath, featLength):
             cumulList.append(lastOne)
 
     finalFeature = samplingList(cumulList, featLength)
-    finalFeature = finalFeature.extend([upPackNum, downPackNum, upStreamTotal, downStreamTotal])
+    finalFeature.extend([upPackNum, downPackNum, upStreamTotal, downStreamTotal])
 
     return finalFeature
 
 
 def train(trainData, trainLabel, context):
     print('start training...')
-    clf = SVC(C=context['cVal'], kernel=context['kernel'], degree=context['degree'], verbose=context['verbose'], decision_function_shape='ovo', random_state=7)
+    clf = SVC(C=context['cVal'], kernel=context['kernel'], gamma='auto', decision_function_shape='ovo', random_state=7)
+    #newData = preprocessing.scale(trainData)
     tModel = clf.fit(trainData, trainLabel)
     print('finish training...')
     return tModel
 
 
 def generateContext():
-    return {'cVal':0.1, 'kernel':'rbf', 'degree':3, 'verbose':False}
+    #[100, 'rbf', 10]
+    return {'cVal':100, 'kernel':'rbf'}
+
+
+class Choices():
+    def __init__(self, dataDir, model, length):
+        self.dataDir = dataDir
+        self.model = model
+        self.length = length
 
 
 def main(opts):
-    trainDataDir = opts.inputDir
-    data, label = loadTrainData(trainDataDir)
-    import pdb
-    pdb.set_trace()
-    if opts.contextDict:
-        context = opts.contextDict
-    else:
-        context = generateContext()
-    mymodel = train(data, label, context)
-    saveModel(mymodel, opts.modelSaveDir)
-    print("model saved at {}".format(opts.modelSaveDir))
+    cVal = [0.0001, 0.001, 0.01, 0.1, 1, 10, 100]
+    kernelVal = ['rbf', 'sigmoid', 'poly']
+    len_list = [10, 30, 50, 70, 90, 110, 130]
+    best_score = 0
+    best_params = []
+    for C in cVal:
+        for kernel in kernelVal:
+            for length in len_list:
+                choices = Choices(opts.inputDir, 'Cumul', length)
+                print("extracting the features...")
+                allData, allLabel, labelMap = nFoldCrossValidation.loadData(choices)
+                allData = np.array(allData)
+                newAllData = preprocessing.scale(allData)
+                X_train, X_test, Y_train, Y_test = train_test_split(newAllData, allLabel, test_size=0.2, random_state=7)
+                clf = SVC(C=C, kernel=kernel, gamma='auto', verbose=opts.verbose, decision_function_shape='ovo', random_state=7)
+                print("start training...")
+                clf.fit(X_train, Y_train)
+                print("start testing...")
+                predictions = clf.predict(X_test)
+                acc = nFoldCrossValidation.computeACC(predictions, Y_test)
+                params = [C, kernel, length]
+                print("performace: %f using %s" % (acc, params))
+                if acc > best_score:
+                    best_score = acc
+                    best_params = params
+
+    print("best: %f using %s" % (best_score, best_params))
 
 
 def parseOpts(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--inputDir', help='')
     parser.add_argument('-m', '--modelSaveDir', help='')
-    parser.add_argument('-c', '--contextDict', help='')
-    parser.add_argument('-v', '--verbose', help='')
+    parser.add_argument('-v', '--verbose', action='store_true', help='')
     opts = parser.parse_args()
     return opts
 
