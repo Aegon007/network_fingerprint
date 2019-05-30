@@ -47,7 +47,7 @@ def getFeature(fpath, opts):
         return trainByBayes.computeFeature(fpath, rangeList)
     elif opts.model == 'VNGpp':
         #rangeList = [-200000, 200001, 5000]
-        rangeList = [-1400000, 1400001, int(opts.interval)]
+        rangeList = [-4500000, 4500001, int(opts.interval)]
         return trainByVNGpp.computeFeature(fpath, rangeList)
     elif opts.model == 'Svm':
         #rangeList = [-200000, 200001, int(opts.interval)]
@@ -55,7 +55,7 @@ def getFeature(fpath, opts):
         return trainBySvm.computeFeature(fpath, rangeList)
     elif opts.model == 'Adaboost':
         #rangeList = [-200000, 200001, int(opts.interval)]
-        rangeList = [-1400000, 1400001, int(opts.interval)]
+        rangeList = [-4500000, 4500001, int(opts.interval)]
         return trainByAdaboost.computeFeature(fpath, rangeList)
     elif opts.model == 'Cumul':
         return trainByCumul.computeFeature(fpath, trainByCumul.Length)
@@ -82,13 +82,35 @@ def mapLabel(fpath, labelMap):
     fname = testByJaccard.getLabel(fname)
     return labelMap[fname]
 
+def fileIsEmpty(fpath):
+    with open(fpath, 'r') as f:
+        content = f.read()
+    return True if content=='' else False
 
 def loadData(opts):
-    fList = fileUtils.genfilelist(opts.dataDir)
-    labelMap = getLabelMap(fList)
+    subDirs = fileUtils.getSubDirs(opts.dataDir)
     tmpDataList = []
     tmpLabelList = []
+    fList = []
+    dirRoot = os.path.abspath(opts.dataDir)
+    for subDir in subDirs:
+        dirpath = os.path.join(dirRoot, subDir)
+        tmpList = fileUtils.genfilelist(dirpath)
+        fList.extend(tmpList)
+
+    """
+    for item in fList.copy():
+        tmp = os.path.basename(item)
+        cname = testByJaccard.getLabel(tmp)
+        if cname == 'what_are_the_most_popular_books_this_week':
+            fList.remove(item)
+    """
+
+    labelMap = getLabelMap(fList)
     for fp in fList:
+        if fileIsEmpty(fp):
+            print('skip empty file {}'.format(fp))
+            continue
         tmpData = getFeature(fp, opts)
         tmpDataList.append(tmpData)
         tmpLabel = mapLabel(fp, labelMap)
