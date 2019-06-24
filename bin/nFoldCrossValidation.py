@@ -51,7 +51,7 @@ def getFeature(fpath, opts):
         return trainByVNGpp.computeFeature(fpath, rangeList)
     elif opts.model == 'Svm':
         #rangeList = [-200000, 200001, int(opts.interval)]
-        rangeList = [-700000, 700001, int(opts.interval)]
+        rangeList = [-4500000, 4500001, int(opts.interval)]
         return trainBySvm.computeFeature(fpath, rangeList)
     elif opts.model == 'Adaboost':
         #rangeList = [-200000, 200001, int(opts.interval)]
@@ -270,7 +270,8 @@ def main(opts):
             predictions = testByVNGpp.test(model, X_test)
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'Svm':
-            model = trainBySvm.train(X_train, Y_train, 0)
+            context = trainBySvm.generateContext()
+            model = trainBySvm.train(X_train, Y_train, context)
             predictions = testBySvm.test(model, X_test)
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'Adaboost':
