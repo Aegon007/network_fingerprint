@@ -8,6 +8,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn import preprocessing
 import numpy as np
 from collections import defaultdict
+import time
 
 import trainByBayes
 import trainByJaccard
@@ -250,6 +251,8 @@ def main(opts):
     newData = preprocessing.scale(allData)
     skf = StratifiedKFold(n_splits=int(opts.nFold))
     acc_list = []
+    train_time_list = []
+    test_time_list = []
     print("selecting model {}".format(opts.model))
     for train_index, test_index in skf.split(newData, allLabel):
         print("start a round of testing...")
@@ -258,39 +261,70 @@ def main(opts):
 
         if opts.model == 'Jaccard':
             modelFileDir = utils.makeTempDir()
+            trainStart = time.time()
             trainByJaccard.train(X_train, modelFileDir)
+            trainEnd = time.time()
+            testStart = time.time()
             str_predictions = testByJaccard.test(X_test, modelFileDir)
+            testEnd = time.time()
             predictions = convert2Nums(str_predictions, labelMap)
         elif opts.model == 'Bayes':
+            trainStart = time.time()
             model = trainByBayes.train(X_train, Y_train)
+            trainEnd = time.time()
+            testStart = time.time()
             predictions = testByBayes.test(model, X_test)
+            testEnd = time.time()
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'VNGpp':
+            trainStart = time.time()
             model = trainByVNGpp.train(X_train, Y_train)
+            trainEnd = time.time()
+            testStart = time.time()
             predictions = testByVNGpp.test(model, X_test)
+            testEnd = time.time()
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'Svm':
             context = trainBySvm.generateContext()
+            trainStart = time.time()
             model = trainBySvm.train(X_train, Y_train, context)
+            trainEnd = time.time()
+            testStart = time.time()
             predictions = testBySvm.test(model, X_test)
+            testEnd = time.time()
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'Adaboost':
+            trainStart = time.time()
             model = trainByAdaboost.train(X_train, Y_train)
+            trainEnd = time.time()
+            testStart = time.time()
             predictions = testByAdaboost.test(model, X_test)
+            testEnd = time.time()
             str_predictions = convert2Str(predictions, labelMap)
         elif opts.model == 'Cumul':
             context = trainByCumul.generateContext()
+            trainStart = time.time()
             model = trainByCumul.train(X_train, Y_train, context)
+            trainEnd = time.time()
+            testStart = time.time()
             predictions = testByCumul.test(model, X_test)
+            testEnd = time.time()
             str_predictions = convert2Str(predictions, labelMap)
         else:
             raise ValueError('input is should among Jaccard/Bayes/VNGpp')
 
         accuracy = computeACC(predictions, Y_test)
+        train_time = trainEnd - trainStart
+        test_time = testEnd - testStart
+
         acc_list.append(accuracy)
+        train_time_list.append(train_time)
+        test_time_list.append(test_time)
+
     print(acc_list)
     avg_accuracy = sum(acc_list)/len(acc_list)
-    print('prediction with method {}, has a accuracy is: {}'.format(opts.model, avg_accuracy))
+    avg_train_time = sum(train_time_list)/len(train_time_list)
+    print('prediction with method {}, has a accuracy is: {}, with average training time {}'.format(opts.model, avg_accuracy, str(avg_train_time)))
 
     if opts.word2vec:
         str_Y_test = convert2Str(Y_test, labelMap)
