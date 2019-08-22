@@ -88,12 +88,12 @@ def fileIsEmpty(fpath):
         content = f.read()
     return True if content=='' else False
 
-def loadData(opts):
-    subDirs = fileUtils.getSubDirs(opts.dataDir)
+def loadData(dataDir, opts):
+    subDirs = fileUtils.getSubDirs(dataDir)
     tmpDataList = []
     tmpLabelList = []
     fList = []
-    dirRoot = os.path.abspath(opts.dataDir)
+    dirRoot = os.path.abspath(dataDir)
     for subDir in subDirs:
         dirpath = os.path.join(dirRoot, subDir)
         tmpList = fileUtils.genfilelist(dirpath)
