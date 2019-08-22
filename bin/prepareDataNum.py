@@ -64,8 +64,8 @@ def verifyData(allLabel, num4class):
 
     return flag
 
-def loadAndVerifyData(droot, data_dim, num4class, dataType):
-    allData, allLabel, labelMap = loadData(droot, data_dim, num4class, dataType)
-    if not verifyData(allLabel, num4class):
-        raise
+def loadAndVerifyData(opts, num4class):
+    allData, allLabel, labelMap = loadData(opts, num4class)
+    #if not verifyData(allLabel, num4class):
+    #    raise
     return allData, allLabel, labelMap

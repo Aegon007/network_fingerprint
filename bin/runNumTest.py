@@ -3,8 +3,7 @@
 import os
 import sys
 import argparse
-from sklearn.model_selection import KFold
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, StratifiedKFold
 from sklearn import preprocessing
 from sklearn.metrics import accuracy_score
 import numpy as np
@@ -58,12 +57,16 @@ class MyOptions():
 
 def oneRun(modelName, X_train, Y_train, X_test, labelMap):
     if 'Adaboost' == modelName:
+        print('now start training...')
         model = trainByAdaboost.train(X_train, Y_train)
+        print('now start testing...')
         predictions = testByAdaboost.test(model, X_test)
         #str_predictions = nFord.convert2Str(predictions, labelMap)
     elif 'Cumul' == modelName:
         context = trainByCumul.generateContext()
+        print('now start training...')
         model = trainByCumul.train(X_train, Y_train, context)
+        print('now start testing...')
         predictions = testByCumul.test(model, X_test)
         #str_predictions = nFord.convert2Str(predictions, labelMap)
     else:
@@ -72,18 +75,34 @@ def oneRun(modelName, X_train, Y_train, X_test, labelMap):
     return predictions
 
 
-def oneTest(testNums, opts):
+def oneTest(testNums, opts, model):
     content_list = []
     for num in testNums:
         print("start extracting feature for num {:d}".format(num))
-        allData, allLabel, labelMap = prepareDataNum.loadData(opts, num)
-        newData = preprocessing.scale(allData)
+        allData, allLabel, labelMap = prepareDataNum.loadAndVerifyData(opts, num)
 
-        X_train, X_test, Y_train, Y_test = train_test_split(newData, allLabel, test_size=0.2, shuffle=True, random_state=77)
-        print('now start training...')
-        predictions = oneRun(opts.model, X_train, Y_train, X_test, labelMap)
+        newData = preprocessing.scale(allData)
+        '''
+        minMaxScalar = preprocessing.MinMaxScaler()
+        newData = minMaxScalar.fit_transform(allData)
+
+        '''
+
+        #X_train, X_test, Y_train, Y_test = train_test_split(newData, allLabel, test_size=0.2, shuffle=True, random_state=77)
+
+        skf = StratifiedKFold(n_splits=5)
+        count = 0
+        for train_index, test_index in skf.split(newData, allLabel):
+            if 0 < count:
+                break
+            X_train, X_test = newData[train_index], newData[test_index]
+            Y_train, Y_test = allLabel[train_index], allLabel[test_index]
+            count = count + 1
+
+        predictions = oneRun(model, X_train, Y_train, X_test, labelMap)
         acc = accuracy_score(Y_test, predictions)
-        content = 'model {} with sample number {:d} has acc {:f}'.format(opts.model, num, acc)
+        content = 'model {} with sample Number {:d} has acc: {:f}'.format(model, num, acc)
+        print(content)
         content_list.append(content)
 
     allContents = '\n#######################\n'.join(content_list)
@@ -93,15 +112,16 @@ def oneTest(testNums, opts):
 
 
 def main(opts):
-    testModels = ['Adaboost', 'Cumul']
+    #testModels = ['Adaboost', 'Cumul']
+    testModels = ['Adaboost']
     testNums = list(range(100, 1400, 100))
     print(testNums)
     print('now start num test for given models {}'.format(testModels))
     opts = MyOptions(opts.input, opts.output)
     for model in testModels:
-        print("selecting model {} for testing...".format(opts.model))
+        print("selecting model {} for testing...".format(model))
         opts.setModel(model)
-        oneTest(testNums, opts)
+        oneTest(testNums, opts, model)
 
 
 def parseOpts(argv):
