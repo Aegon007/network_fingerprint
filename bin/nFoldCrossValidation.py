@@ -108,6 +108,8 @@ def loadData(dataDir, opts):
     """
 
     labelMap = getLabelMap(fList)
+    totalNum = len(fList)
+    count = 1
     for fp in fList:
         if fileIsEmpty(fp):
             print('skip empty file {}'.format(fp))
@@ -116,6 +118,8 @@ def loadData(dataDir, opts):
         tmpDataList.append(tmpData)
         tmpLabel = mapLabel(fp, labelMap)
         tmpLabelList.append(tmpLabel)
+        print('\r now reading {:d}/{:d}'.format(count, totalNum), end='')
+        count = count + 1
 
     allData = np.array(tmpDataList)
     allLabel = np.array(tmpLabelList)
@@ -247,7 +251,7 @@ def writeTestResults(str_Y_test, str_predictions, opts, acc_list, avg_accuracy):
 
 def main(opts):
     print("start extracting feature...")
-    allData, allLabel, labelMap = loadData(opts)
+    allData, allLabel, labelMap = loadData(opts.dataDir, opts)
     newData = preprocessing.scale(allData)
     skf = StratifiedKFold(n_splits=int(opts.nFold))
     acc_list = []

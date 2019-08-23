@@ -16,7 +16,7 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import GridSearchCV
 from sklearn import preprocessing
 import numpy as np
-
+import pandas as pd
 
 import fileUtils
 import tools
@@ -61,14 +61,13 @@ def samplingList(cumulList, featLength):
 def computeFeature(fpath, featLength):
     upPackNum, downPackNum, upStreamTotal, downStreamTotal, traceTimeList, tupleList = trainByVNGpp.readfile(fpath)
 
-    def readfile(line):
-        tmp = line.strip().split(',')
-        return tmp[-2], tmp[-1]
     cumulList = []
-    for line in fileUtils.readTxtFile(fpath, 'time'):
-        pSize, pDirec = readfile(line)
-        tmp = fileUtils.str2float(pSize) * fileUtils.str2float(pDirec)
-        if cumulList == []:
+    df = pd.read_csv(fpath, sep=',', skiprows=0)
+    for index, row in df.iterrows():
+        pSize = row['size']
+        pDirec = row['direction']
+        tmp = pSize * pDirec
+        if [] == cumulList:
             cumulList.append(tmp)
         else:
             lastOne = cumulList[-1] + tmp

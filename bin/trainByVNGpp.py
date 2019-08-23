@@ -7,6 +7,7 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.externals import joblib
 import argparse
 import numpy as np
+import pandas as pd
 
 import fileUtils
 import tools
@@ -39,7 +40,7 @@ def calculateBursts(tupleList):
     return burstList
 
 
-def readfile(fpath):
+def readfile_old(fpath):
     UpStreamTotal = 0
     DownStreamTotal = 0
     UpPackNum = 0
@@ -67,6 +68,34 @@ def readfile(fpath):
             DownPackNum += 1
         else:
             raise ValueError('unexpected flag value: {}'.format(flag))
+
+    return UpPackNum, DownPackNum, UpStreamTotal, DownStreamTotal, traceTimeList, tupleList
+
+
+def readfile(fpath):
+    UpStreamTotal = 0
+    DownStreamTotal = 0
+    UpPackNum = 0
+    DownPackNum = 0
+    traceTimeList = []
+    tupleList = []
+    df = pd.read_csv(fpath, sep=',', skiprows=0)
+    for index, row in df.iterrows():
+        flag = row['direction']
+        tmpSize = row['size']
+        traceTimeList.append(tmpSize)
+
+        tmpTuple = (tmpSize, flag)
+        tupleList.append(tmpTuple)
+
+        if 1 == flag:
+            UpStreamTotal += tmpSize
+            UpPackNum += 1
+        elif -1 == flag:
+            DownStreamTotal += tmpSize
+            DownPackNum += 1
+        else:
+            print('flag value is 0, file name is {}, index is {:d}'.format(fpath, index))
 
     return UpPackNum, DownPackNum, UpStreamTotal, DownStreamTotal, traceTimeList, tupleList
 
